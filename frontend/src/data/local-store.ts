@@ -54,6 +54,30 @@ export function resetRows(key: string): EntryRow[] {
   return rows
 }
 
+// 业务模块之外的辅助数据（应急处置流程、排查事项等）单独存一个键，和模块清单互不干扰。
+export function readJson<T>(key: string, fallback: T): T {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return clone(fallback)
+  }
+  const raw = window.localStorage.getItem(key)
+  if (!raw) {
+    window.localStorage.setItem(key, JSON.stringify(fallback))
+    return clone(fallback)
+  }
+  try {
+    return JSON.parse(raw) as T
+  } catch {
+    window.localStorage.setItem(key, JSON.stringify(fallback))
+    return clone(fallback)
+  }
+}
+
+export function writeJson<T>(key: string, value: T): void {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    window.localStorage.setItem(key, JSON.stringify(value))
+  }
+}
+
 export function storageKey(): string {
   return STORAGE_KEY
 }

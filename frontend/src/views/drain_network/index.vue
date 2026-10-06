@@ -24,6 +24,50 @@
       </span>
     </p>
 
+    <section class="linked-box">
+      <div class="linked-head">
+        <h3>受影响管段排查事项</h3>
+        <span class="form-tip">应急事件采纳升级建议后自动生成，共 {{ inspections.length }} 项</span>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>事项编号</th>
+            <th>来源应急事件</th>
+            <th>受影响管段</th>
+            <th>排查位置</th>
+            <th>排查内容</th>
+            <th>状态</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="item in inspections" :key="item.id">
+            <td>{{ item.itemNo }}</td>
+            <td>{{ item.eventNo }}</td>
+            <td>{{ item.segmentNo }}</td>
+            <td>{{ item.location }}</td>
+            <td>{{ item.content }}</td>
+            <td>{{ item.status }}</td>
+            <td class="row-actions">
+              <button
+                v-for="target in inspectionStatuses.filter((s) => s !== item.status)"
+                :key="target"
+                class="link"
+                type="button"
+                @click="changeInspection(item.id, target)"
+              >
+                标记{{ target }}
+              </button>
+            </td>
+          </tr>
+          <tr v-if="!inspections.length">
+            <td colspan="7" class="empty-state">暂无应急联动排查事项，应急事件采纳升级建议后在此生成</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
     <form class="filter-bar" @submit.prevent="reload">
       <label v-for="field in filterFields" :key="field" class="filter-item">
         <span>{{ field }}</span>
@@ -79,6 +123,9 @@ import {
   moduleMeta,
   runAction as applyAction,
 } from '@/api/local-service'
+import { listInspections, updateInspectionStatus } from '@/api/emergency-service'
+import { INSPECTION_STATUSES } from '@/data/emergency-flow'
+import type { InspectionItem } from '@/data/emergency-flow'
 import type { EntryRow } from '@/data/types'
 
 const meta = moduleMeta('drain_network')
@@ -86,8 +133,10 @@ const columns = ["管段编号", "上游节点", "下游节点", "管段长度",
 const actions = ["标记淤积", "预警溢流", "确认封堵"]
 const statuses = ["正常", "淤积预警", "溢流风险", "已封堵"]
 const stats = [{"label": "管段总数", "value": 0}, {"label": "淤积预警管段", "value": 0}, {"label": "溢流风险管段", "value": 0}]
+const inspectionStatuses = [...INSPECTION_STATUSES]
 
 const rows = ref<EntryRow[]>([])
+const inspections = ref<InspectionItem[]>([])
 const total = ref(0)
 const errorMessage = ref('')
 const filters = ref<Record<string, string>>({})
@@ -98,6 +147,18 @@ const statusSummary = computed(() =>
     count: rows.value.filter((row) => String(row.status) === status).length,
   })),
 )
+
+function changeInspection(id: number, status: InspectionItem['status']) {
+  const result = updateInspectionStatus(id, status)
+  errorMessage.value = result.ok ? '' : result.message
+  if (result.ok) {
+    reloadInspections()
+  }
+}
+
+function reloadInspections() {
+  inspections.value = listInspections()
+}
 
 function resetFilters() {
   filters.value = {}
@@ -128,6 +189,7 @@ function reload() {
     const payload = listEntries(meta.key, filters.value)
     rows.value = payload.items
     total.value = payload.total
+    reloadInspections()
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '排水管网列表读取失败'
   }

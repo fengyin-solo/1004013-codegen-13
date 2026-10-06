@@ -24,6 +24,42 @@
       </span>
     </p>
 
+    <section class="linked-box">
+      <div class="linked-head">
+        <h3>应急联动关联缺陷</h3>
+        <span class="form-tip">应急事件采纳升级建议后保留在此，共 {{ linkedDefects.length }} 条，不随事件关闭而删除</span>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>缺陷编号</th>
+            <th>关联应急事件</th>
+            <th>关联管段</th>
+            <th>缺陷类型</th>
+            <th>发现位置</th>
+            <th>严重等级</th>
+            <th>发现日期</th>
+            <th>当前状态</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="row in linkedDefects" :key="String(row.id)">
+            <td>{{ row['缺陷编号'] }}</td>
+            <td>{{ row['关联应急事件'] }}</td>
+            <td>{{ row['关联管段'] }}</td>
+            <td>{{ row['缺陷类型'] }}</td>
+            <td>{{ row['发现位置'] }}</td>
+            <td>{{ row['严重等级'] }}</td>
+            <td>{{ row['发现日期'] }}</td>
+            <td>{{ row.status }}</td>
+          </tr>
+          <tr v-if="!linkedDefects.length">
+            <td colspan="8" class="empty-state">暂无应急联动关联缺陷</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
     <form class="filter-bar" @submit.prevent="reload">
       <label v-for="field in filterFields" :key="field" class="filter-item">
         <span>{{ field }}</span>
@@ -79,6 +115,7 @@ import {
   moduleMeta,
   runAction as applyAction,
 } from '@/api/local-service'
+import { listLinkedDefects } from '@/api/emergency-service'
 import type { EntryRow } from '@/data/types'
 
 const meta = moduleMeta('defect')
@@ -88,6 +125,7 @@ const statuses = ["待确认", "已确认", "已修复", "已忽略"]
 const stats = [{"label": "待确认缺陷", "value": 0}, {"label": "已修复缺陷", "value": 0}, {"label": "严重缺陷", "value": 0}]
 
 const rows = ref<EntryRow[]>([])
+const linkedDefects = ref<EntryRow[]>([])
 const total = ref(0)
 const errorMessage = ref('')
 const filters = ref<Record<string, string>>({})
@@ -128,6 +166,7 @@ function reload() {
     const payload = listEntries(meta.key, filters.value)
     rows.value = payload.items
     total.value = payload.total
+    linkedDefects.value = listLinkedDefects()
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '缺陷记录列表读取失败'
   }
