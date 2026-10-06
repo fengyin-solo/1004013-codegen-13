@@ -67,6 +67,48 @@
       <span>共 {{ total }} 条排水管网记录</span>
       <span v-if="errorMessage" class="error-text">{{ errorMessage }}</span>
     </footer>
+
+    <section class="check-section">
+      <h3>受影响管段排查事项</h3>
+      <p class="page-desc">应急事件采纳升级建议后自动生成，按 待排查 → 排查中 → 已排查 依次推进。</p>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>事项编号</th>
+            <th>来源事件</th>
+            <th>管段编号</th>
+            <th>排查要求</th>
+            <th>生成时间</th>
+            <th>当前状态</th>
+            <th>可执行动作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="check in checks" :key="String(check.id)">
+            <td>{{ check['事项编号'] }}</td>
+            <td>{{ check['来源事件'] }}</td>
+            <td>{{ check['管段编号'] }}</td>
+            <td>{{ check['排查要求'] }}</td>
+            <td>{{ check['生成时间'] }}</td>
+            <td>{{ check.status }}</td>
+            <td class="row-actions">
+              <button
+                v-if="nextCheckLabel(check)"
+                class="link"
+                type="button"
+                @click="advance(check)"
+              >
+                {{ nextCheckLabel(check) }}
+              </button>
+              <span v-else>—</span>
+            </td>
+          </tr>
+          <tr v-if="!checks.length">
+            <td colspan="7" class="empty-state">暂无受影响管段排查事项</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
   </section>
 </template>
 
@@ -79,6 +121,7 @@ import {
   moduleMeta,
   runAction as applyAction,
 } from '@/api/local-service'
+import { CHECK_NEXT_LABEL, advanceCheck, listChecks } from '@/api/emergency-flow'
 import type { EntryRow } from '@/data/types'
 
 const meta = moduleMeta('drain_network')
@@ -88,6 +131,7 @@ const statuses = ["正常", "淤积预警", "溢流风险", "已封堵"]
 const stats = [{"label": "管段总数", "value": 0}, {"label": "淤积预警管段", "value": 0}, {"label": "溢流风险管段", "value": 0}]
 
 const rows = ref<EntryRow[]>([])
+const checks = ref<EntryRow[]>([])
 const total = ref(0)
 const errorMessage = ref('')
 const filters = ref<Record<string, string>>({})
@@ -133,5 +177,26 @@ function reload() {
   }
 }
 
-onMounted(reload)
+function nextCheckLabel(check: EntryRow): string {
+  return CHECK_NEXT_LABEL[String(check.status)] ?? ''
+}
+
+function advance(check: EntryRow) {
+  errorMessage.value = ''
+  const result = advanceCheck(Number(check.id))
+  if (!result.ok) {
+    errorMessage.value = result.message
+    return
+  }
+  reloadChecks()
+}
+
+function reloadChecks() {
+  checks.value = listChecks()
+}
+
+onMounted(() => {
+  reload()
+  reloadChecks()
+})
 </script>

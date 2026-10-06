@@ -43,7 +43,7 @@
       </thead>
       <tbody>
         <tr v-for="row in rows" :key="String(row.id)">
-          <td v-for="column in columns" :key="column">{{ row[column] ?? '—' }}</td>
+          <td v-for="column in columns" :key="column">{{ row[column] === undefined || row[column] === '' ? '—' : row[column] }}</td>
           <td>{{ row.status }}</td>
           <td class="row-actions">
             <button
@@ -82,7 +82,7 @@ import {
 import type { EntryRow } from '@/data/types'
 
 const meta = moduleMeta('defect')
-const columns = ["缺陷编号", "所属管线", "缺陷类型", "发现位置", "严重等级", "发现日期", "缺陷描述", "记录状态"]
+const columns = ["缺陷编号", "所属管线", "缺陷类型", "发现位置", "严重等级", "发现日期", "缺陷描述", "记录状态", "关联应急事件"]
 const actions = ["确认缺陷", "标记修复", "忽略缺陷"]
 const statuses = ["待确认", "已确认", "已修复", "已忽略"]
 const stats = [{"label": "待确认缺陷", "value": 0}, {"label": "已修复缺陷", "value": 0}, {"label": "严重缺陷", "value": 0}]
